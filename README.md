@@ -18,6 +18,13 @@ Spring Boot HSQLDB 使用デモ（RestController使用）
 - [4. 開発完了後の本番用資材作成手順](#4-開発完了後の本番用資材作成手順)
   - [4.1. 本番用資材作成（ビルド）](#41-本番用資材作成ビルド)
   - [4.2. 本番用資材配置（デプロイ）・実行](#42-本番用資材配置デプロイ実行)
+- [5. DBを使用した処理の実装](#5-dbを使用した処理の実装)
+  - [5.1. エンティティの作成](#51-エンティティの作成)
+  - [5.2. リポジトリの作成](#52-リポジトリの作成)
+  - [5.3. その他のクラスの作成](#53-その他のクラスの作成)
+    - [5.3.1. サービス・コントローラー](#531-サービスコントローラー)
+    - [5.3.2. DTO（データ保持のためのクラス）](#532-dtoデータ保持のためのクラス)
+  - [5.4. 今回の処理内容とエンドポイント](#54-今回の処理内容とエンドポイント)
 
 
 # 2. 初期構築
@@ -138,4 +145,183 @@ public class HelloController {
 ## 4.2. 本番用資材配置（デプロイ）・実行
 1. 配置するサーバー上の任意の場所に、ビルドしたJARファイルを配置する
 2. `java -jar 配置したJARファイル` コマンドで実行する（ `Ctrl + C` で終了）
+
+
+
+# 5. DBを使用した処理の実装
+DBを使用するにあたって、以下のクラスを作成する。
+
+- エンティティ
+  - DBのデータを格納して使用するためのクラス
+  - 普通、テーブル単位で作成する
+- リポジトリ
+  - DBにアクセスするための専用クラス
+  - 普通、テーブル単位で作成する
+
+今回、デモ用として以下のようなテーブルの利用を想定する。
+
+**ユーザーテーブル**
+
+```mermaid
+erDiagram
+  user {
+    user_id VARCHAR PK "【NOT NULL】ユーザーID"
+    user_name VARCHAR "【NOT NULL】 ユーザー名"
+    user_kana VARCHAR "かな氏名"
+    delete_flg BOOLEAN "【NOT NULL】削除フラグ"
+  }
+```
+
+## 5.1. エンティティの作成
+- 以下の内容のファイルを作成する
+- 格納ディレクトリ: `src/main/java/com/example/spring_hsqldb_rest_demo/`
+- ファイル名: `User.java`
+
+```java
+package ※ファイル作成時に自動で設定される;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import lombok.Data;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Entity
+@Table(name = "user")
+public class User {
+    
+    @Id
+    @Column
+    private String userId;
+    
+    @Column(nullable = false)
+    private String userName;
+    
+    @Column(nullable = true)
+    private String userKana;
+    
+    @Column(nullable = false)
+    private Boolean deleteFlg;
+}
+```
+
+**補足**
+- エンティティのクラスには `@Entity` をつける。通常はクラス名がテーブル名として認識される。
+- `@Table(name = "テーブル名")` とつけると、明示的にテーブル名を指定できる（クラス名とテーブル名を分けたい場合など）
+  - 上記の場合は本来は不要。今回はわかりやすくするために付与。
+- エンティティは、ゲッター・セッターなどでカプセル化されたクラスにする必要があるが、
+  Lombokの以下のアノテーションで自動生成している
+  - `@Data` ： ゲッター・セッターの自動生成
+  - `@AllArgsConstructor` ： コンストラクタ（メンバ変数に対する全引数あり）の自動生成
+  - `@NoArgsConstructor` ： コンストラクタ（引数なし）の自動生成
+- 各メンバー変数は、 `@Column` をつけることにより、DBのテーブルの「列」になる。
+  テーブルの列名は、自動的にケースの変換が行われる（例：userId ←→ user_id）
+- `@Column` にある `(nullable = false)` は、 その列が NOT NULL かどうかをあることを表している。
+  （例： `nullable = false` → NULLは入らない → NOT NULL）
+- `@Id` は、その列が主キー（PK）であることを表している
+
+
+## 5.2. リポジトリの作成
+- 以下の内容のファイルを作成する
+- 格納ディレクトリ: `src/main/java/com/example/spring_hsqldb_rest_demo/`
+- ファイル名: `UserRepository.java`
+
+```java
+package ※ファイル作成時に自動で設定される;
+
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface UserRepository extends JpaRepository<User, String> {
+    
+    List<User> findAllByDeleteFlg(Boolean deleteFlg);
+}
+
+```
+
+**補足**
+- リポジトリは `@Repository` をつけた、インタフェースにする。
+- インタフェースは、 `JpaRepository<T, ID>` を継承（extends）する。
+  - `T` には、テーブルで使用するエンティティのクラスを指定する（ここでは `User` クラス）
+  - `ID` には、主キー（PK）となる列の型（エンティティで `@Id` に指定した列の型）を指定する（ここでは `String`）
+- 継承した時点で、多くのメソッドが含まれるため、基本的なDB操作であれば、中の記述は不要
+- 今回は継承に含まれていない、SQLのクエリを使用するため、 `findAllByDeleteFlg` を定義している
+
+
+## 5.3. その他のクラスの作成
+### 5.3.1. サービス・コントローラー
+- `UserService.java` → サービスのクラス。
+- `UserController.java` → コントローラーのクラス。
+
+Controller → Service → Repository → DB の順にアクセスされる
+
+### 5.3.2. DTO（データ保持のためのクラス）
+- `UserRequest.java` → コントローラーがユーザーデータを受け取るために作ったクラス
+- `UserResponse.java` → コントローラーがユーザーデータを返すために作ったクラス
+- `UserResponseList.java` → コントローラーが複数のユーザーデータを返すために作ったクラス
+- `ProcessResultResponse.java` → コントローラーが処理結果を返すために作ったクラス
+
+
+## 5.4. 今回の処理内容とエンドポイント
+今回の処理内容とエンドポイントは以下の通り。  
+確認する際は、 APIのクライアントソフトなどで、 `http://localhost:8080` をつけて実行します。
+
+例： `/api/v1/users` → `http://localhost:8080/api/v1/users`
+
+
+- 【GET】 /api/v1/users/USER001
+  - 「USER001」のユーザー情報を取得
+  - 「USER001」部分は好きに指定可能
+  - 対応コントローラー： `UserController` クラスの `fetchUser` メソッド
+
+- 【POST】 /api/v1/users
+  - ユーザーデータを登録
+  - リクエスト時、 BodyにユーザーデータをJSONで指定することで、そのユーザーデータを登録することができる
+  - 対応コントローラー： `UserController` クラスの `addUser` メソッド
+
+**Bodyの指定例（ヘッダーの Content-Type は application/json にする）**
+
+```json
+{
+    "userId": "ID001",
+    "userName": "テスト太郎1",
+    "userKana": "てすとたろう1",
+    "isDelete": false
+}
+```
+
+- 【PUT】 /api/v1/users
+  - ユーザーデータを更新
+  - リクエスト時、 BodyにユーザーデータをJSONで指定することで、そのユーザーデータを更新することができる
+  - 対応コントローラー： `UserController` クラスの `updateUser` メソッド
+
+**Bodyの指定例（ヘッダーの Content-Type は application/json にする）**
+
+```json
+{
+    "userId": "ID001",
+    "userName": "テスト太郎1",
+    "userKana": "てすとたろう1",
+    "isDelete": true
+}
+```
+
+- 【DELETE】 /api/v1/users/USER001
+  - 「USER001」のユーザー情報を削除
+  - 「USER001」部分は好きに指定可能
+  - 対応コントローラー： `UserController` クラスの `deleteUser` メソッド
+
+- 【GET】 /api/v1/users
+  - 全ユーザーの情報を取得
+  - 対応コントローラー： `UserController` クラスの `fetchAllUser` メソッド
+
+- 【GET】 /api/v1/users?activeOnly=true
+  - アクティブな全ユーザーの情報を取得（削除フラグが1でないユーザー）
+  - 対応コントローラー： `UserController` クラスの `fetchAllUser` メソッド
+
 
