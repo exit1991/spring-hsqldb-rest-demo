@@ -25,6 +25,12 @@ Spring Boot HSQLDB 使用デモ（RestController使用）
     - [5.3.1. サービス・コントローラー](#531-サービスコントローラー)
     - [5.3.2. DTO（データ保持のためのクラス）](#532-dtoデータ保持のためのクラス)
   - [5.4. 今回の処理内容とエンドポイント](#54-今回の処理内容とエンドポイント)
+    - [5.4.1. 【GET】 /api/v1/users/USER001](#541-get-apiv1usersuser001)
+    - [5.4.2. 【POST】 /api/v1/users](#542-post-apiv1users)
+    - [5.4.3. 【PUT】 /api/v1/users](#543-put-apiv1users)
+    - [5.4.4. 【DELETE】 /api/v1/users/USER001](#544-delete-apiv1usersuser001)
+    - [5.4.5. 【GET】 /api/v1/users](#545-get-apiv1users)
+    - [5.4.6. 【GET】 /api/v1/users?activeOnly=true](#546-get-apiv1usersactiveonlytrue)
 
 
 # 2. 初期構築
@@ -274,15 +280,15 @@ Controller → Service → Repository → DB の順にアクセスされる
 例： `/api/v1/users` → `http://localhost:8080/api/v1/users`
 
 
-- 【GET】 /api/v1/users/USER001
-  - 「USER001」のユーザー情報を取得
-  - 「USER001」部分は好きに指定可能
-  - 対応コントローラー： `UserController` クラスの `fetchUser` メソッド
+### 5.4.1. 【GET】 /api/v1/users/USER001
+- 「USER001」のユーザー情報を取得
+- 「USER001」部分は好きに指定可能
+- 対応コントローラー： `UserController` クラスの `fetchUser` メソッド
 
-- 【POST】 /api/v1/users
-  - ユーザーデータを登録
-  - リクエスト時、 BodyにユーザーデータをJSONで指定することで、そのユーザーデータを登録することができる
-  - 対応コントローラー： `UserController` クラスの `addUser` メソッド
+### 5.4.2. 【POST】 /api/v1/users
+- ユーザーデータを登録
+- リクエスト時、 BodyにユーザーデータをJSONで指定することで、そのユーザーデータを登録することができる
+- 対応コントローラー： `UserController` クラスの `addUser` メソッド
 
 **Bodyの指定例（ヘッダーの Content-Type は application/json にする）**
 
@@ -295,10 +301,10 @@ Controller → Service → Repository → DB の順にアクセスされる
 }
 ```
 
-- 【PUT】 /api/v1/users
-  - ユーザーデータを更新
-  - リクエスト時、 BodyにユーザーデータをJSONで指定することで、そのユーザーデータを更新することができる
-  - 対応コントローラー： `UserController` クラスの `updateUser` メソッド
+### 5.4.3. 【PUT】 /api/v1/users
+- ユーザーデータを更新
+- リクエスト時、 BodyにユーザーデータをJSONで指定することで、そのユーザーデータを更新することができる
+- 対応コントローラー： `UserController` クラスの `updateUser` メソッド
 
 **Bodyの指定例（ヘッダーの Content-Type は application/json にする）**
 
@@ -311,17 +317,16 @@ Controller → Service → Repository → DB の順にアクセスされる
 }
 ```
 
-- 【DELETE】 /api/v1/users/USER001
-  - 「USER001」のユーザー情報を削除
-  - 「USER001」部分は好きに指定可能
-  - 対応コントローラー： `UserController` クラスの `deleteUser` メソッド
+### 5.4.4. 【DELETE】 /api/v1/users/USER001
+- 「USER001」のユーザー情報を削除
+- 「USER001」部分は好きに指定可能
+- 対応コントローラー： `UserController` クラスの `deleteUser` メソッド
 
-- 【GET】 /api/v1/users
-  - 全ユーザーの情報を取得
-  - 対応コントローラー： `UserController` クラスの `fetchAllUser` メソッド
+### 5.4.5. 【GET】 /api/v1/users
+- 全ユーザーの情報を取得
+- 対応コントローラー： `UserController` クラスの `fetchAllUser` メソッド
 
-- 【GET】 /api/v1/users?activeOnly=true
-  - アクティブな全ユーザーの情報を取得（削除フラグが1でないユーザー）
-  - 対応コントローラー： `UserController` クラスの `fetchAllUser` メソッド
-
+### 5.4.6. 【GET】 /api/v1/users?activeOnly=true
+- アクティブな全ユーザーの情報を取得（削除フラグが1でないユーザー）
+- 対応コントローラー： `UserController` クラスの `fetchAllUser` メソッド
 
